@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>HTML Quiz — Timed with Navigation, Reset & Colored Feedback</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: linear-gradient(to right, #74ebd5, #9face6);
+            margin: 0;
+            padding: 20px;
+        }
+
+        .quiz-container {
+            background: #ffffff;
+            max-width: 750px;
+            margin: auto;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        }
+
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 6px;
+        }
+
+        /* Meta row: left = score, center = note, right = answered count */
+        .meta {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            color: #34495e;
+            margin-bottom: 18px;
+            gap: 12px;
+        }
+
+        .meta .meta-left,
+        .meta .meta-center,
+        .meta .meta-right {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .meta .meta-center {
+            align-items: center;
+            text-align: center;
+        }
+
+        .meta .meta-right {
+            align-items: flex-end;
+            text-align: right;
+        }
+
+        .question {
+            margin-top: 10px;
+            font-weight: 700;
+            color: #2c3e50;
+            font-size: 18px;
+        }
+
+        .options {
+            margin-top: 12px;
+        }
+
+        label.option {
+            display: block;
+            margin-left: 15px;
+            margin-top: 8px;
+            cursor: pointer;
+            user-select: none;
+            padding: 10px;
+            border-radius: 6px;
+            transition: background .15s ease, color .15s ease, border-left .15s ease;
+            border-left: 4px solid transparent;
+        }
+
+        label.option:hover {
+            background: #f3f6fb;
+        }
+
+        /* Correct (green) and wrong (red) states */
+        label.option.correct {
+            background: #e6ffed;
+            color: #0b5132;
+            border-left-color: #28a745;
+        }
+
+        label.option.wrong {
+            background: #ffecec;
+            color: #7a151b;
+            border-left-color: #dc3545;
+        }
+
+        /* Controls layout now has three areas: left, center, right */
+        .controls {
+            display: flex;
+            width: 100%;
+            margin-top: 20px;
+        }
+
+        .controls .col {
+            flex: 1 1 0;
+            display: flex;
+            align-items: center;
+        }
+
+        .controls .col.left {
+            justify-content: flex-start;
+        }
+
+        .controls .col.center {
+            justify-content: center;
+        }
+
+        .controls .col.right {
+            justify-content: flex-end;
+        }
+
+        .btn {
+            padding: 10px 14px;
+            font-size: 15px;
+            font-weight: 700;
+            color: white;
+            background: #2c3e50;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+
+        .btn.secondary {
+            background: #7f8c8d;
+        }
+
+        .btn.ghost {
+            background: #e74c3c;
+            color: white;
+        }
+
+        .btn:disabled {
+            opacity: 0.55;
+            cursor: default;
+        }
+
+        .timer-top {
+            margin-bottom: 12px;
+        }
+
+        .timer {
+            text-align: center;
+            color: #2c3e50;
+            font-weight: 700;
+            font-size: 16px;
+        }
+
+        .timer-bar {
+            width: 100%;
+            height: 8px;
+            background: #e6e9ee;
+            border-radius: 8px;
+            overflow: hidden;
+            margin-top: 8px;
+        }
+
+        .timer-fill {
+            height: 100%;
+            background: linear-gradient(90deg,#f39c12,#f1c40f);
+            width: 100%;
+            transition: width 0.25s linear;
+        }
+
+        #result {
+            margin-top: 20px;
+            text-align: center;
+            font-size: 20px;
+            font-weight: bold;
+            color: green;
+        }
+
+        .progress {
+            color: #566270;
+            margin-top: 6px;
+            font-size: 14px;
+        }
+
+        .score {
+            font-weight: 700;
+            color: #2c3e50;
+            text-align: left; /* explicit left alignment */
+        }
+
+        .small-note {
+            font-size: 13px;
+            color: #6b7a85;
+        }
+
+        .answered {
+            font-weight: 700;
+            color: #2c3e50;
+        }
+
+        /* Review blocks */
+        .review-item {
+            margin-bottom: 10px;
+            padding: 10px;
+            border-radius: 8px;
+            background: #fbfbfb;
+            border: 1px solid #eef2f5;
+        }
+
+        .review-item .meta {
+            margin-bottom: 6px;
+        }
+
+        @media (max-width: 520px) {
+            .controls { flex-direction: column; gap: 10px; }
+            .controls .col { justify-content: center; }
+            .meta { flex-direction: column; gap: 8px; align-items: stretch; }
+            .meta .meta-right { align-items: flex-start; text-align: left; }
+        }
+    </style>
+</head>
+<body>
+<div class="quiz-container">
+    <h1>HTML Quiz</h1>
+
+    <!-- Meta: left = score, center = note, right = answered count -->
+    <div class="meta">
+        <div class="meta-left">
+            <div class="score" id="liveScore">Score: 0 / 10</div>
+        </div>
+        <div class="meta-center">
+            <div class="small-note">Timed — answer each question before the timer ends</div>
+        </div>
+        <div class="meta-right">
+            <div class="answered" id="answeredCount">Answered: 0 / 10</div>
+        </div>
+    </div>
+
+    <div id="quizArea">
+        <!-- question area populated by JS -->
+    </div>
+
+    <div id="result"></div>
+</div>
+
+<script>
+    // Configuration: seconds per question
+    const TIME_PER_QUESTION = 15;
+
+    // Questions
+    const questions = [
+        { q: "1. What does HTML stand for?", options: ["Hyper Text Markup Language", "High Text Machine Language", "Hyperlinks Text Mark Language"], correct: 0 },
+        { q: "2. Which tag is used to create a hyperlink?", options: ["<link>", "<a>", "<href>"], correct: 1 },
+        { q: "3. Which tag is used for the largest heading?", options: ["<h6>", "<h1>", "<head>"], correct: 1 },
+        { q: "4. Which tag is used to insert an image?", options: ["<image>", "<img>", "<src>"], correct: 1 },
+        { q: "5. Which tag is used to create a paragraph?", options: ["<p>", "<para>", "<text>"], correct: 0 },
+        { q: "6. Which tag creates a line break?", options: ["<lb>", "<br>", "<break>"], correct: 1 },
+        { q: "7. Which tag is used to create an ordered list?", options: ["<ul>", "<ol>", "<li>"], correct: 1 },
+        { q: "8. Which tag is used to define a table row?", options: ["<td>", "<th>", "<tr>"], correct: 2 },
+        { q: "9. Where is the <title> tag placed?", options: ["Body section", "Head section", "Footer section"], correct: 1 },
+        { q: "10. HTML is a ________ language.", options: ["Programming", "Markup", "Scripting"], correct: 1 }
+    ];
+
+    let currentIndex = 0;
+    let timer = TIME_PER_QUESTION;
+    let timerInterval = null;
+    const answers = new Array(questions.length).fill(null);
+
+    const quizArea = document.getElementById('quizArea');
+    const resultDiv = document.getElementById('result');
+    const liveScoreEl = document.getElementById('liveScore');
+    const answeredCountEl = document.getElementById('answeredCount');
+
+    function startQuestion(index) {
+        clearInterval(timerInterval);
+        timer = TIME_PER_QUESTION;
+        renderQuestion(index);
+        timerInterval = setInterval(() => {
+            timer--;
+            updateTimerUI();
+            if (timer <= 0) {
+                clearInterval(timerInterval);
+                autoAdvanceOnTimeout();
+            }
+        }, 1000);
+    }
+
+    function renderQuestion(index) {
+        const item = questions[index];
+        const progressText = `Question ${index + 1} of ${questions.length}`;
+
+        // place timer above the question (timer-top)
+        quizArea.innerHTML = `
+            <div class="timer-top">
+                <div class="timer">Time left: <span id="timeValue">${timer}</span>s</div>
+                <div class="timer-bar"><div class="timer-fill" id="timerFill" style="width:100%"></div></div>
+            </div>
+
+            <div class="progress">${progressText}</div>
+            <div class="question">${escapeHtml(item.q)}</div>
+            <div class="options" id="optionsContainer">
+                ${item.options.map((opt, i) => `
+                    <label class="option">
+                        <input type="radio" name="option" value="${i}">
+                        <span style="margin-left:10px">${escapeHtml(opt)}</span>
+                    </label>
+                `).join('')}
+            </div>
+
+            <div class="controls">
+                <div class="col left">
+                    <button class="btn secondary" id="prevBtn">Previous</button>
+                </div>
+                <div class="col center">
+                    <button class="btn ghost" id="resetBtn">Reset</button>
+                </div>
+                <div class="col right">
+                    <button class="btn" id="nextBtn">${index === questions.length - 1 ? 'Finish' : 'Next'}</button>
+                </div>
+            </div>
+        `;
+
+        // Hook up option change to save immediately and update score live + color feedback
+        const optionInputs = document.querySelectorAll('input[name="option"]');
+        optionInputs.forEach(inp => {
+            inp.addEventListener('change', () => {
+                const selectedValue = parseInt(inp.value, 10);
+                answers[currentIndex] = selectedValue;
+                updateOptionStyles();
+                updateLiveScoreUI();
+            });
+        });
+
+        // restore previously chosen answer if any
+        const chosen = answers[index];
+        if (chosen !== null) {
+            const input = document.querySelector(`input[name="option"][value="${chosen}"]`);
+            if (input) input.checked = true;
+        }
+
+        // Previous button
+        const prevBtn = document.getElementById('prevBtn');
+        prevBtn.disabled = index === 0;
+        prevBtn.addEventListener('click', () => {
+            navigateTo(index - 1);
+        });
+
+        // Reset button (center) — clears current selection and NAVIGATES to first question
+        const resetBtn = document.getElementById('resetBtn');
+        resetBtn.addEventListener('click', () => {
+            // clear selection for current question
+            answers[currentIndex] = null;
+            const checked = document.querySelector('input[name="option"]:checked');
+            if (checked) checked.checked = false;
+            updateOptionStyles();
+            updateLiveScoreUI();
+
+            // navigate to the first question (index 0) and restart its timer
+            currentIndex = 0;
+            startQuestion(0);
+        });
+
+        // Next/Finish button (right)
+        const nextBtn = document.getElementById('nextBtn');
+        nextBtn.addEventListener('click', () => {
+            // ensure current selection is saved
+            const selected = document.querySelector('input[name="option"]:checked');
+            answers[currentIndex] = selected ? parseInt(selected.value, 10) : answers[currentIndex];
+            updateOptionStyles();
+            if (currentIndex < questions.length - 1) {
+                navigateTo(index + 1);
+            } else {
+                finishQuiz();
+            }
+        });
+
+        // Initially update styles (show colors only if question already answered)
+        updateOptionStyles();
+        updateTimerUI();
+        updateLiveScoreUI();
+    }
+
+    function updateOptionStyles() {
+        const chosen = answers[currentIndex];
+        const correct = questions[currentIndex].correct;
+        const labels = document.querySelectorAll('#optionsContainer label.option');
+
+        labels.forEach(label => {
+            label.classList.remove('correct', 'wrong');
+            const input = label.querySelector('input[type="radio"]');
+            const val = parseInt(input.value, 10);
+
+            // Only apply color feedback when the question has been answered (chosen !== null)
+            if (chosen !== null) {
+                if (val === correct) {
+                    label.classList.add('correct');
+                }
+                if (val === chosen && chosen !== correct) {
+                    label.classList.add('wrong');
+                }
+            }
+        });
+    }
+
+    function updateTimerUI() {
+        const timeValue = document.getElementById('timeValue');
+        const timerFill = document.getElementById('timerFill');
+        if (timeValue) timeValue.textContent = Math.max(0, timer);
+        if (timerFill) {
+            const pct = Math.max(0, (timer / TIME_PER_QUESTION) * 100);
+            timerFill.style.width = pct + '%';
+        }
+    }
+
+    function navigateTo(targetIndex) {
+        clearInterval(timerInterval);
+        // save current selection (best effort)
+        const selected = document.querySelector('input[name="option"]:checked');
+        answers[currentIndex] = selected ? parseInt(selected.value, 10) : answers[currentIndex];
+
+        currentIndex = Math.max(0, Math.min(questions.length - 1, targetIndex));
+        startQuestion(currentIndex);
+    }
+
+    function computeScore() {
+        let s = 0;
+        for (let i = 0; i < questions.length; i++) {
+            if (answers[i] !== null && answers[i] === questions[i].correct) s++;
+        }
+        return s;
+    }
+
+    function computeAnsweredCount() {
+        return answers.filter(a => a !== null).length;
+    }
+
+    function updateLiveScoreUI() {
+        const score = computeScore();
+        const answered = computeAnsweredCount();
+        liveScoreEl.textContent = `Score: ${score} / ${questions.length}`;
+        answeredCountEl.textContent = `Answered: ${answered} / ${questions.length}`;
+    }
+
+    function autoAdvanceOnTimeout() {
+        // Move forward or finish. Note: if user had selected an option before timeout it's already saved.
+        if (currentIndex < questions.length - 1) {
+            currentIndex++;
+            startQuestion(currentIndex);
+        } else {
+            finishQuiz();
+        }
+    }
+
+    function finishQuiz() {
+        clearInterval(timerInterval);
+        // Ensure final selection is saved
+        const selected = document.querySelector('input[name="option"]:checked');
+        answers[currentIndex] = selected ? parseInt(selected.value, 10) : answers[currentIndex];
+
+        const finalScore = computeScore();
+        quizArea.innerHTML = '';
+        resultDiv.innerHTML = `🎉 Your Score: ${finalScore} / ${questions.length}`;
+
+        // Show review with colored feedback per question
+        const review = document.createElement('div');
+        review.style.marginTop = '18px';
+        review.innerHTML = questions.map((q, i) => {
+            const chosen = answers[i];
+            const correct = q.correct;
+            const chosenText = chosen === null ? '<em>Unanswered</em>' : escapeHtml(q.options[chosen]);
+            const correctText = escapeHtml(q.options[correct]);
+            return `<div class="review-item">
+                        <div class="meta"><strong>${i+1}.</strong> ${escapeHtml(q.q)}</div>
+                        <div>Correct answer: <strong style="color:#0b5132">${correctText}</strong></div>
+                        <div>Your answer: ${chosenText} ${chosen === correct ? '<span style="color:#28a745"> (Correct)</span>' : (chosen === null ? '' : '<span style="color:#dc3545"> (Wrong)</span>')}</div>
+                    </div>`;
+        }).join('');
+        resultDiv.appendChild(review);
+
+        // Restart button
+        const restartBtn = document.createElement('button');
+        restartBtn.textContent = 'Restart Quiz';
+        restartBtn.className = 'btn';
+        restartBtn.style.marginTop = '12px';
+        restartBtn.addEventListener('click', () => {
+            currentIndex = 0;
+            answers.fill(null);
+            resultDiv.innerHTML = '';
+            updateLiveScoreUI();
+            startQuestion(0);
+        });
+        resultDiv.appendChild(restartBtn);
+    }
+
+    // Escape for safe text insertion
+    function escapeHtml(unsafe) {
+        return String(unsafe)
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;");
+    }
+
+    // Start the quiz
+    updateLiveScoreUI();
+    startQuestion(0);
+</script>
+</body>
+</html>
